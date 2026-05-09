@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Analytics } from "@vercel/analytics/react";
 
 const DAILY_LIMIT = 6;
-const STRIPE_LINK = "https://buy.stripe.com/test_3cI28t8UB0cz9GR3x8cMM00";
+const const STRIPE_LINK = "https://buy.stripe.com/3cI28t8UB0cz9GR3x8cMM00";
 
 const severityConfig = {
   low: { color: "#10b981", label: "Low Severity", icon: "✓", bg: "#10b98120" },
