@@ -1,4 +1,8 @@
 import { useState, useRef, useEffect } from "react";
+import { Analytics } from "@vercel/analytics/react";
+
+const DAILY_LIMIT = 6;
+const STRIPE_LINK = "https://buy.stripe.com/test_3cI28t8UB0cz9GR3x8cMM00";
 
 const severityConfig = {
   low: { color: "#10b981", label: "Low Severity", icon: "✓", bg: "#10b98120" },
@@ -6,13 +10,33 @@ const severityConfig = {
   high: { color: "#ef4444", label: "High Severity", icon: "!", bg: "#ef444420" },
 };
 
+function getUsageData() {
+  const today = new Date().toDateString();
+  const raw = localStorage.getItem("symptom_usage");
+  if (!raw) return { date: today, count: 0 };
+  const data = JSON.parse(raw);
+  if (data.date !== today) return { date: today, count: 0 };
+  return data;
+}
+
+function saveUsage(count) {
+  const today = new Date().toDateString();
+  localStorage.setItem("symptom_usage", JSON.stringify({ date: today, count }));
+}
+
 export default function App() {
   const [symptoms, setSymptoms] = useState("");
   const [age, setAge] = useState("");
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [usageCount, setUsageCount] = useState(0);
   const resultRef = useRef(null);
+
+  useEffect(() => {
+    const data = getUsageData();
+    setUsageCount(data.count);
+  }, []);
 
   useEffect(() => {
     if (result && resultRef.current) {
@@ -22,6 +46,11 @@ export default function App() {
 
   async function analyze() {
     if (!symptoms.trim()) return;
+    const usage = getUsageData();
+    if (usage.count >= DAILY_LIMIT) {
+      setError(`You've used all ${DAILY_LIMIT} free checks for today.`);
+      return;
+    }
     setLoading(true);
     setResult(null);
     setError(null);
@@ -44,6 +73,9 @@ export default function App() {
       const data = await response.json();
       const text = data?.content?.[0]?.text;
       if (!text) throw new Error("No response");
+      const newCount = usage.count + 1;
+      saveUsage(newCount);
+      setUsageCount(newCount);
       setResult(text);
     } catch (e) {
       setError("Something went wrong. Please try again.");
@@ -58,6 +90,7 @@ export default function App() {
   if (lower.includes("high severity") || lower.includes("emergency") || lower.includes("immediately")) severity = "high";
   else if (lower.includes("low severity") || lower.includes("mild")) severity = "low";
   const cfg = severityConfig[severity];
+  const remaining = DAILY_LIMIT - usageCount;
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0f1a", fontFamily: "'DM Sans', sans-serif", paddingBottom: 60 }}>
@@ -69,13 +102,23 @@ export default function App() {
         textarea:focus, input:focus { outline: none; }
         textarea::placeholder, input::placeholder { color: #334155; }
       `}</style>
-      <div style={{ borderBottom: "1px solid #1e293b", padding: "20px 24px", display: "flex", alignItems: "center", gap: 12, background: "#0d1424", position: "sticky", top: 0, zIndex: 10 }}>
-        <div style={{ width: 36, height: 36, background: "linear-gradient(135deg, #06b6d4, #0e7490)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>⚕</div>
-        <div>
-          <div style={{ color: "#f1f5f9", fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: 16 }}>SymptomAI</div>
-          <div style={{ color: "#64748b", fontSize: 11, letterSpacing: 1 }}>AI HEALTH CHECKER</div>
+
+      <div style={{ borderBottom: "1px solid #1e293b", padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0d1424", position: "sticky", top: 0, zIndex: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 36, height: 36, background: "linear-gradient(135deg, #06b6d4, #0e7490)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>⚕</div>
+          <div>
+            <div style={{ color: "#f1f5f9", fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: 16 }}>SymptomAI</div>
+            <div style={{ color: "#64748b", fontSize: 11, letterSpacing: 1 }}>AI HEALTH CHECKER</div>
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ background: remaining <= 2 ? "#ef444420" : "#06b6d420", border: `1px solid ${remaining <= 2 ? "#ef4444" : "#06b6d4"}40`, borderRadius: 20, padding: "6px 14px" }}>
+            <span style={{ color: remaining <= 2 ? "#ef4444" : "#06b6d4", fontSize: 12, fontWeight: 700 }}>{remaining}/{DAILY_LIMIT} left</span>
+          </div>
+          <a href={STRIPE_LINK} target="_blank" style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#000", fontWeight: 700, fontSize: 12, padding: "6px 14px", borderRadius: 20, textDecoration: "none" }}>⭐ Premium</a>
         </div>
       </div>
+
       <div style={{ maxWidth: 480, margin: "0 auto", padding: "32px 20px 0" }}>
         <div style={{ marginBottom: 32 }}>
           <h1 style={{ fontFamily: "Syne, sans-serif", fontSize: 32, fontWeight: 800, color: "#f1f5f9", lineHeight: 1.2, marginBottom: 10 }}>
@@ -83,6 +126,7 @@ export default function App() {
           </h1>
           <p style={{ color: "#64748b", fontSize: 14, lineHeight: 1.6 }}>Describe your symptoms and get instant AI-powered guidance.</p>
         </div>
+
         {!result && !loading && (
           <div>
             <div style={{ background: "#111827", border: "1px solid #1e293b", borderRadius: 16, padding: 20, marginBottom: 16 }}>
@@ -93,18 +137,40 @@ export default function App() {
               <span style={{ color: "#64748b", fontSize: 11, letterSpacing: 2, textTransform: "uppercase", whiteSpace: "nowrap" }}>Age (opt.)</span>
               <input value={age} onChange={e => setAge(e.target.value)} placeholder="e.g. 28" style={{ background: "transparent", border: "none", color: "#f1f5f9", fontSize: 15, fontFamily: "inherit", flex: 1 }} />
             </div>
-            <button onClick={analyze} disabled={!symptoms.trim()} style={{ width: "100%", padding: 16, background: symptoms.trim() ? "linear-gradient(135deg, #06b6d4, #0e7490)" : "#1e293b", color: symptoms.trim() ? "#000" : "#64748b", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 700, fontFamily: "inherit", cursor: symptoms.trim() ? "pointer" : "not-allowed" }}>
-              Analyze Symptoms →
-            </button>
+            {remaining === 0 ? (
+              <div style={{ background: "#111827", border: "1px solid #f59e0b40", borderRadius: 14, padding: 24, textAlign: "center" }}>
+                <p style={{ color: "#f59e0b", fontWeight: 800, fontSize: 18, marginBottom: 8 }}>Daily limit reached!</p>
+                <p style={{ color: "#64748b", fontSize: 14, marginBottom: 20 }}>You've used all 6 free checks. Upgrade to Premium for unlimited access!</p>
+                <a href={STRIPE_LINK} target="_blank" style={{ display: "block", background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#000", fontWeight: 700, fontSize: 15, padding: 16, borderRadius: 14, textAlign: "center", textDecoration: "none", marginBottom: 12 }}>
+                  ⭐ Upgrade to Premium – €4/month
+                </a>
+                <p style={{ color: "#334155", fontSize: 12 }}>Or come back tomorrow for 6 more free checks</p>
+              </div>
+            ) : (
+              <button onClick={analyze} disabled={!symptoms.trim()} style={{ width: "100%", padding: 16, background: symptoms.trim() ? "linear-gradient(135deg, #06b6d4, #0e7490)" : "#1e293b", color: symptoms.trim() ? "#000" : "#64748b", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 700, fontFamily: "inherit", cursor: symptoms.trim() ? "pointer" : "not-allowed" }}>
+                Analyze Symptoms →
+              </button>
+            )}
           </div>
         )}
+
         {loading && (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: "40px 0" }}>
             <div style={{ width: 48, height: 48, border: "3px solid #1e293b", borderTop: "3px solid #06b6d4", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
             <p style={{ color: "#64748b", fontSize: 14, letterSpacing: 2, textTransform: "uppercase" }}>Analyzing symptoms...</p>
           </div>
         )}
-        {error && <div style={{ color: "#ef4444", background: "#ef444415", border: "1px solid #ef444430", borderRadius: 12, padding: "14px 18px", fontSize: 14 }}>{error}</div>}
+
+        {error && (
+          <div style={{ background: "#111827", border: "1px solid #f59e0b40", borderRadius: 14, padding: 24, textAlign: "center" }}>
+            <p style={{ color: "#f59e0b", fontWeight: 800, fontSize: 18, marginBottom: 8 }}>Daily limit reached!</p>
+            <p style={{ color: "#64748b", fontSize: 14, marginBottom: 20 }}>Upgrade to Premium for unlimited access!</p>
+            <a href={STRIPE_LINK} target="_blank" style={{ display: "block", background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#000", fontWeight: 700, fontSize: 15, padding: 16, borderRadius: 14, textAlign: "center", textDecoration: "none" }}>
+              ⭐ Upgrade to Premium – €4/month
+            </a>
+          </div>
+        )}
+
         {result && (
           <div ref={resultRef} style={{ animation: "fadeUp 0.4s ease" }}>
             <div style={{ background: "#111827", border: "1px solid #1e293b", borderRadius: 16, overflow: "hidden" }}>
@@ -123,12 +189,16 @@ export default function App() {
                 <p style={{ color: "#64748b", fontSize: 12, margin: 0, lineHeight: 1.6 }}>⚕️ This is AI-generated information only and is not a medical diagnosis. Always consult a qualified healthcare professional.</p>
               </div>
             </div>
-            <button onClick={() => { setResult(null); setSymptoms(""); setAge(""); }} style={{ width: "100%", marginTop: 16, padding: 14, background: "transparent", color: "#06b6d4", border: "1px solid #0e7490", borderRadius: 14, fontSize: 14, fontWeight: 600, fontFamily: "inherit", cursor: "pointer" }}>
+            <a href={STRIPE_LINK} target="_blank" style={{ display: "block", background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#000", fontWeight: 700, fontSize: 14, padding: 14, borderRadius: 14, textAlign: "center", textDecoration: "none", marginTop: 12, marginBottom: 12 }}>
+              ⭐ Upgrade to Premium – €4/month
+            </a>
+            <button onClick={() => { setResult(null); setSymptoms(""); setAge(""); }} style={{ width: "100%", padding: 14, background: "transparent", color: "#06b6d4", border: "1px solid #0e7490", borderRadius: 14, fontSize: 14, fontWeight: 600, fontFamily: "inherit", cursor: "pointer" }}>
               ← Check New Symptoms
             </button>
           </div>
         )}
       </div>
+      <Analytics />
     </div>
   );
 }
