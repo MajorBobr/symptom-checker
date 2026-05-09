@@ -1,0 +1,26 @@
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
+)
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).end()
+
+  const event = req.body
+
+  if (event.type === 'checkout.session.completed') {
+    const email = event.data.object.customer_details?.email
+    const customerId = event.data.object.customer
+
+    if (email) {
+      await supabase.from('premium_users').upsert({ 
+        email, 
+        stripe_customer_id: customerId 
+      })
+    }
+  }
+
+  res.status(200).json({ received: true })
+}
