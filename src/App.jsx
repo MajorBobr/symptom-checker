@@ -2,12 +2,12 @@ import { useState, useRef, useEffect } from "react";
 import { Analytics } from "@vercel/analytics/react";
 
 const DAILY_LIMIT = 6;
-const const STRIPE_LINK = "https://buy.stripe.com/3cI28t8UB0cz9GR3x8cMM00";
+const STRIPE_LINK = "https://buy.stripe.com/3cI28t8UB0cz9GR3x8cMM00";
 
 const severityConfig = {
-  low: { color: "#10b981", label: "Low Severity", icon: "✓", bg: "#10b98120" },
-  medium: { color: "#f59e0b", label: "Medium Severity", icon: "⚠", bg: "#f59e0b20" },
-  high: { color: "#ef4444", label: "High Severity", icon: "!", bg: "#ef444420" },
+  low: { color: "#16a34a", label: "Low Severity", icon: "✓", bg: "#f0fdf4", border: "#bbf7d0" },
+  medium: { color: "#d97706", label: "Medium Severity", icon: "⚠", bg: "#fffbeb", border: "#fde68a" },
+  high: { color: "#dc2626", label: "High Severity", icon: "!", bg: "#fef2f2", border: "#fecaca" },
 };
 
 function getUsageData() {
@@ -47,10 +47,7 @@ export default function App() {
   async function analyze() {
     if (!symptoms.trim()) return;
     const usage = getUsageData();
-    if (usage.count >= DAILY_LIMIT) {
-      setError(`You've used all ${DAILY_LIMIT} free checks for today.`);
-      return;
-    }
+    if (usage.count >= DAILY_LIMIT) return;
     setLoading(true);
     setResult(null);
     setError(null);
@@ -93,107 +90,132 @@ export default function App() {
   const remaining = DAILY_LIMIT - usageCount;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0f1a", fontFamily: "'DM Sans', sans-serif", paddingBottom: 60 }}>
+    <div style={{ minHeight: "100vh", background: "#f8fafc", fontFamily: "'Inter', 'Segoe UI', sans-serif" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Syne:wght@700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         textarea:focus, input:focus { outline: none; }
-        textarea::placeholder, input::placeholder { color: #334155; }
+        textarea::placeholder, input::placeholder { color: #94a3b8; }
       `}</style>
 
-      <div style={{ borderBottom: "1px solid #1e293b", padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0d1424", position: "sticky", top: 0, zIndex: 10 }}>
+      {/* Header */}
+      <div style={{ background: "#1e40af", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64, boxShadow: "0 2px 8px rgba(30,64,175,0.3)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 36, height: 36, background: "linear-gradient(135deg, #06b6d4, #0e7490)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>⚕</div>
+          <div style={{ width: 38, height: 38, background: "rgba(255,255,255,0.2)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>⚕️</div>
           <div>
-            <div style={{ color: "#f1f5f9", fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: 16 }}>SymptomAI</div>
-            <div style={{ color: "#64748b", fontSize: 11, letterSpacing: 1 }}>AI HEALTH CHECKER</div>
+            <div style={{ color: "#fff", fontWeight: 700, fontSize: 17, letterSpacing: -0.3 }}>SymptomAI</div>
+            <div style={{ color: "#93c5fd", fontSize: 10, letterSpacing: 1, textTransform: "uppercase" }}>Medical Assistant</div>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ background: remaining <= 2 ? "#ef444420" : "#06b6d420", border: `1px solid ${remaining <= 2 ? "#ef4444" : "#06b6d4"}40`, borderRadius: 20, padding: "6px 14px" }}>
-            <span style={{ color: remaining <= 2 ? "#ef4444" : "#06b6d4", fontSize: 12, fontWeight: 700 }}>{remaining}/{DAILY_LIMIT} left</span>
+          <div style={{ background: "rgba(255,255,255,0.15)", borderRadius: 20, padding: "5px 12px" }}>
+            <span style={{ color: remaining <= 2 ? "#fca5a5" : "#bfdbfe", fontSize: 12, fontWeight: 600 }}>{remaining}/{DAILY_LIMIT} free</span>
           </div>
-          <a href={STRIPE_LINK} target="_blank" style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#000", fontWeight: 700, fontSize: 12, padding: "6px 14px", borderRadius: 20, textDecoration: "none" }}>⭐ Premium</a>
+          <a href={STRIPE_LINK} target="_blank" style={{ background: "#fbbf24", color: "#000", fontWeight: 700, fontSize: 12, padding: "6px 14px", borderRadius: 20, textDecoration: "none" }}>⭐ Premium</a>
         </div>
       </div>
 
-      <div style={{ maxWidth: 480, margin: "0 auto", padding: "32px 20px 0" }}>
-        <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontFamily: "Syne, sans-serif", fontSize: 32, fontWeight: 800, color: "#f1f5f9", lineHeight: 1.2, marginBottom: 10 }}>
-            What are you<br /><span style={{ color: "#06b6d4" }}>feeling today?</span>
+      {/* Hero banner */}
+      <div style={{ background: "linear-gradient(135deg, #1e40af, #1d4ed8)", padding: "40px 24px 48px" }}>
+        <div style={{ maxWidth: 560, margin: "0 auto", textAlign: "center" }}>
+          <h1 style={{ color: "#fff", fontSize: 28, fontWeight: 700, lineHeight: 1.3, marginBottom: 10 }}>
+            AI-Powered Symptom Analysis
           </h1>
-          <p style={{ color: "#64748b", fontSize: 14, lineHeight: 1.6 }}>Describe your symptoms and get instant AI-powered guidance.</p>
+          <p style={{ color: "#93c5fd", fontSize: 15, lineHeight: 1.6 }}>
+            Describe your symptoms and receive instant guidance from our medical AI assistant.
+          </p>
         </div>
+      </div>
 
+      <div style={{ maxWidth: 560, margin: "-24px auto 0", padding: "0 20px 60px" }}>
+
+        {/* Form card */}
         {!result && !loading && (
-          <div>
-            <div style={{ background: "#111827", border: "1px solid #1e293b", borderRadius: 16, padding: 20, marginBottom: 16 }}>
-              <label style={{ color: "#64748b", fontSize: 11, letterSpacing: 2, textTransform: "uppercase", display: "block", marginBottom: 10 }}>Your Symptoms</label>
-              <textarea value={symptoms} onChange={e => setSymptoms(e.target.value)} placeholder="e.g. I have a headache, sore throat, and mild fever since yesterday..." rows={5} style={{ width: "100%", background: "transparent", border: "none", color: "#f1f5f9", fontSize: 15, lineHeight: 1.7, resize: "none", fontFamily: "inherit" }} />
-            </div>
-            <div style={{ background: "#111827", border: "1px solid #1e293b", borderRadius: 16, padding: "14px 20px", marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
-              <span style={{ color: "#64748b", fontSize: 11, letterSpacing: 2, textTransform: "uppercase", whiteSpace: "nowrap" }}>Age (opt.)</span>
-              <input value={age} onChange={e => setAge(e.target.value)} placeholder="e.g. 28" style={{ background: "transparent", border: "none", color: "#f1f5f9", fontSize: 15, fontFamily: "inherit", flex: 1 }} />
-            </div>
+          <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: 28, animation: "fadeUp 0.3s ease" }}>
+            <label style={{ color: "#374151", fontSize: 13, fontWeight: 600, display: "block", marginBottom: 8 }}>
+              Describe your symptoms <span style={{ color: "#6b7280", fontWeight: 400 }}>(be as detailed as possible)</span>
+            </label>
+            <textarea
+              value={symptoms}
+              onChange={e => setSymptoms(e.target.value)}
+              placeholder="e.g. I have had a persistent headache for 2 days, along with a sore throat and mild fever of 38°C..."
+              rows={5}
+              style={{ width: "100%", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 10, color: "#1e293b", fontSize: 15, lineHeight: 1.7, resize: "none", fontFamily: "inherit", padding: "12px 14px", marginBottom: 16 }}
+            />
+            <label style={{ color: "#374151", fontSize: 13, fontWeight: 600, display: "block", marginBottom: 8 }}>Age <span style={{ color: "#6b7280", fontWeight: 400 }}>(optional)</span></label>
+            <input
+              value={age}
+              onChange={e => setAge(e.target.value)}
+              placeholder="e.g. 34"
+              style={{ width: "100%", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 10, color: "#1e293b", fontSize: 15, fontFamily: "inherit", padding: "11px 14px", marginBottom: 20 }}
+            />
+
             {remaining === 0 ? (
-              <div style={{ background: "#111827", border: "1px solid #f59e0b40", borderRadius: 14, padding: 24, textAlign: "center" }}>
-                <p style={{ color: "#f59e0b", fontWeight: 800, fontSize: 18, marginBottom: 8 }}>Daily limit reached!</p>
-                <p style={{ color: "#64748b", fontSize: 14, marginBottom: 20 }}>You've used all 6 free checks. Upgrade to Premium for unlimited access!</p>
-                <a href={STRIPE_LINK} target="_blank" style={{ display: "block", background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#000", fontWeight: 700, fontSize: 15, padding: 16, borderRadius: 14, textAlign: "center", textDecoration: "none", marginBottom: 12 }}>
+              <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 12, padding: 20, textAlign: "center" }}>
+                <p style={{ color: "#1e40af", fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Daily limit reached</p>
+                <p style={{ color: "#64748b", fontSize: 14, marginBottom: 16 }}>Upgrade to Premium for unlimited daily checks.</p>
+                <a href={STRIPE_LINK} target="_blank" style={{ display: "block", background: "#1e40af", color: "#fff", fontWeight: 700, fontSize: 15, padding: 14, borderRadius: 10, textDecoration: "none", marginBottom: 10 }}>
                   ⭐ Upgrade to Premium – €4/month
                 </a>
-                <p style={{ color: "#334155", fontSize: 12 }}>Or come back tomorrow for 6 more free checks</p>
+                <p style={{ color: "#94a3b8", fontSize: 12 }}>Or come back tomorrow for 6 more free checks</p>
               </div>
             ) : (
-              <button onClick={analyze} disabled={!symptoms.trim()} style={{ width: "100%", padding: 16, background: symptoms.trim() ? "linear-gradient(135deg, #06b6d4, #0e7490)" : "#1e293b", color: symptoms.trim() ? "#000" : "#64748b", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 700, fontFamily: "inherit", cursor: symptoms.trim() ? "pointer" : "not-allowed" }}>
+              <button onClick={analyze} disabled={!symptoms.trim()} style={{ width: "100%", padding: 15, background: symptoms.trim() ? "#1e40af" : "#e2e8f0", color: symptoms.trim() ? "#fff" : "#94a3b8", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, fontFamily: "inherit", cursor: symptoms.trim() ? "pointer" : "not-allowed", letterSpacing: 0.3 }}>
                 Analyze Symptoms →
               </button>
             )}
+
+            <p style={{ color: "#94a3b8", fontSize: 11, textAlign: "center", marginTop: 12 }}>
+              🔒 Not a diagnosis. Always consult a healthcare professional.
+            </p>
           </div>
         )}
 
+        {/* Loading */}
         {loading && (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: "40px 0" }}>
-            <div style={{ width: 48, height: 48, border: "3px solid #1e293b", borderTop: "3px solid #06b6d4", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-            <p style={{ color: "#64748b", fontSize: 14, letterSpacing: 2, textTransform: "uppercase" }}>Analyzing symptoms...</p>
+          <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: 48, textAlign: "center" }}>
+            <div style={{ width: 48, height: 48, border: "3px solid #e2e8f0", borderTop: "3px solid #1e40af", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
+            <p style={{ color: "#64748b", fontSize: 14, fontWeight: 500 }}>Analyzing your symptoms...</p>
+            <p style={{ color: "#94a3b8", fontSize: 12, marginTop: 6 }}>This usually takes a few seconds</p>
           </div>
         )}
 
-        {error && (
-          <div style={{ background: "#111827", border: "1px solid #f59e0b40", borderRadius: 14, padding: 24, textAlign: "center" }}>
-            <p style={{ color: "#f59e0b", fontWeight: 800, fontSize: 18, marginBottom: 8 }}>Daily limit reached!</p>
-            <p style={{ color: "#64748b", fontSize: 14, marginBottom: 20 }}>Upgrade to Premium for unlimited access!</p>
-            <a href={STRIPE_LINK} target="_blank" style={{ display: "block", background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#000", fontWeight: 700, fontSize: 15, padding: 16, borderRadius: 14, textAlign: "center", textDecoration: "none" }}>
-              ⭐ Upgrade to Premium – €4/month
-            </a>
+        {/* Error */}
+        {error && !result && (
+          <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: 24, textAlign: "center" }}>
+            <p style={{ color: "#dc2626", fontWeight: 600, marginBottom: 8 }}>Something went wrong</p>
+            <button onClick={() => setError(null)} style={{ background: "#1e40af", color: "#fff", border: "none", borderRadius: 8, padding: "8px 20px", fontFamily: "inherit", cursor: "pointer" }}>Try Again</button>
           </div>
         )}
 
+        {/* Result */}
         {result && (
           <div ref={resultRef} style={{ animation: "fadeUp 0.4s ease" }}>
-            <div style={{ background: "#111827", border: "1px solid #1e293b", borderRadius: 16, overflow: "hidden" }}>
-              <div style={{ background: cfg.bg, borderBottom: `1px solid ${cfg.color}40`, padding: "12px 20px", display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ background: cfg.color, color: "#000", fontWeight: 800, width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>{cfg.icon}</span>
-                <span style={{ color: cfg.color, fontWeight: 700, fontSize: 14, letterSpacing: 1 }}>{cfg.label.toUpperCase()}</span>
-              </div>
-              <div style={{ padding: "20px 24px" }}>
-                {lines.map((line, i) => {
-                  const isHeader = line.startsWith("##") || line.endsWith(":");
-                  const clean = line.replace(/^#+\s*/, "").replace(/\*\*/g, "");
-                  return <p key={i} style={{ color: isHeader ? "#06b6d4" : "#f1f5f9", fontSize: isHeader ? 13 : 15, fontWeight: isHeader ? 700 : 400, letterSpacing: isHeader ? 1.5 : 0, textTransform: isHeader ? "uppercase" : "none", marginBottom: isHeader ? 6 : 10, marginTop: isHeader && i > 0 ? 18 : 0, lineHeight: 1.7, borderLeft: isHeader ? "2px solid #06b6d4" : "none", paddingLeft: isHeader ? 10 : 0 }}>{clean}</p>;
-                })}
-              </div>
-              <div style={{ margin: "0 24px 20px", padding: "12px 16px", background: "#1e293b60", borderRadius: 10, border: "1px solid #1e293b" }}>
-                <p style={{ color: "#64748b", fontSize: 12, margin: 0, lineHeight: 1.6 }}>⚕️ This is AI-generated information only and is not a medical diagnosis. Always consult a qualified healthcare professional.</p>
-              </div>
+            <div style={{ background: cfg.bg, border: `1.5px solid ${cfg.border}`, borderRadius: 12, padding: "14px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ background: cfg.color, color: "#fff", fontWeight: 800, width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>{cfg.icon}</span>
+              <span style={{ color: cfg.color, fontWeight: 700, fontSize: 14 }}>{cfg.label}</span>
             </div>
-            <a href={STRIPE_LINK} target="_blank" style={{ display: "block", background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#000", fontWeight: 700, fontSize: 14, padding: 14, borderRadius: 14, textAlign: "center", textDecoration: "none", marginTop: 12, marginBottom: 12 }}>
-              ⭐ Upgrade to Premium – €4/month
+
+            <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: 24, marginBottom: 16 }}>
+              {lines.map((line, i) => {
+                const isHeader = line.startsWith("##") || (line.endsWith(":") && line.length < 40);
+                const clean = line.replace(/^#+\s*/, "").replace(/\*\*/g, "");
+                return <p key={i} style={{ color: isHeader ? "#1e40af" : "#334155", fontSize: isHeader ? 11 : 15, fontWeight: isHeader ? 700 : 400, letterSpacing: isHeader ? 1.5 : 0, textTransform: isHeader ? "uppercase" : "none", marginBottom: isHeader ? 8 : 10, marginTop: isHeader && i > 0 ? 20 : 0, lineHeight: 1.7, borderLeft: isHeader ? "3px solid #1e40af" : "none", paddingLeft: isHeader ? 10 : 0 }}>{clean}</p>;
+              })}
+            </div>
+
+            <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 12, padding: 16, marginBottom: 16 }}>
+              <p style={{ color: "#1e40af", fontSize: 12, lineHeight: 1.6 }}>⚕️ This analysis is AI-generated and does not constitute medical advice. Please consult a qualified healthcare professional for proper diagnosis and treatment.</p>
+            </div>
+
+            <a href={STRIPE_LINK} target="_blank" style={{ display: "block", background: "#fbbf24", color: "#000", fontWeight: 700, fontSize: 14, padding: 14, borderRadius: 10, textAlign: "center", textDecoration: "none", marginBottom: 12 }}>
+              ⭐ Upgrade to Premium – €4/month – Unlimited checks
             </a>
-            <button onClick={() => { setResult(null); setSymptoms(""); setAge(""); }} style={{ width: "100%", padding: 14, background: "transparent", color: "#06b6d4", border: "1px solid #0e7490", borderRadius: 14, fontSize: 14, fontWeight: 600, fontFamily: "inherit", cursor: "pointer" }}>
-              ← Check New Symptoms
+
+            <button onClick={() => { setResult(null); setSymptoms(""); setAge(""); }} style={{ width: "100%", padding: 13, background: "transparent", color: "#1e40af", border: "1.5px solid #bfdbfe", borderRadius: 10, fontSize: 14, fontWeight: 600, fontFamily: "inherit", cursor: "pointer" }}>
+              ← New Symptom Check
             </button>
           </div>
         )}
