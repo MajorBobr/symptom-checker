@@ -2,13 +2,13 @@ import { useState, useRef, useEffect } from "react";
 import { Analytics } from "@vercel/analytics/react";
 import { supabase } from "./supabase.js";
 
-const DAILY_LIMIT = 6;
+const DAILY_LIMIT = 3;
 const STRIPE_LINK = "https://buy.stripe.com/3cI28t8UB0cz9GR3x8cMM00";
 
 const severityConfig = {
-  low: { color: "#16a34a", label: "Low Severity", icon: "✓", bg: "#f0fdf4", border: "#bbf7d0" },
-  medium: { color: "#d97706", label: "Medium Severity", icon: "⚠", bg: "#fffbeb", border: "#fde68a" },
-  high: { color: "#dc2626", label: "High Severity", icon: "!", bg: "#fef2f2", border: "#fecaca" },
+  low: { color: "#16a34a", label: "Low Severity", icon: "✓", lightBg: "#f0fdf4", lightBorder: "#bbf7d0", darkBg: "#14532d30", darkBorder: "#16a34a40" },
+  medium: { color: "#d97706", label: "Medium Severity", icon: "⚠", lightBg: "#fffbeb", lightBorder: "#fde68a", darkBg: "#78350f30", darkBorder: "#d9770640" },
+  high: { color: "#dc2626", label: "High Severity", icon: "!", lightBg: "#fef2f2", lightBorder: "#fecaca", darkBg: "#7f1d1d30", darkBorder: "#dc262640" },
 };
 
 function getUsageData() {
@@ -34,14 +34,18 @@ export default function App() {
   const [usageCount, setUsageCount] = useState(0);
   const [email, setEmail] = useState("");
   const [isPremium, setIsPremium] = useState(false);
-  const [checkingPremium, setCheckingPremium] = useState(false);
   const [emailSubmitted, setEmailSubmitted] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [history, setHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
   const resultRef = useRef(null);
 
   useEffect(() => {
     const data = getUsageData();
     setUsageCount(data.count);
     const savedEmail = localStorage.getItem("user_email");
+    const savedDark = localStorage.getItem("dark_mode") === "true";
+    setDarkMode(savedDark);
     if (savedEmail) {
       setEmail(savedEmail);
       setEmailSubmitted(true);
@@ -55,27 +59,54 @@ export default function App() {
     }
   }, [result]);
 
+  function toggleDark() {
+    const next = !darkMode;
+    setDarkMode(next);
+    localStorage.setItem("dark_mode", next);
+  }
+
   async function checkPremium(userEmail) {
-    setCheckingPremium(true);
     try {
       const { data } = await supabase
         .from("premium_users")
         .select("email")
-        .eq("email", userEmail)
+        .eq("email", userEmail.trim())
         .single();
       setIsPremium(!!data);
+      if (data) loadHistory(userEmail.trim());
     } catch {
       setIsPremium(false);
-    } finally {
-      setCheckingPremium(false);
     }
+  }
+
+  async function loadHistory(userEmail) {
+    try {
+      const { data } = await supabase
+        .from("symptom_history")
+        .select("*")
+        .eq("email", userEmail)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (data) setHistory(data);
+    } catch {}
+  }
+
+  async function saveToHistory(userEmail, symptomsText, resultText) {
+    try {
+      await supabase.from("symptom_history").insert({
+        email: userEmail,
+        symptoms: symptomsText,
+        result: resultText,
+      });
+      loadHistory(userEmail);
+    } catch {}
   }
 
   async function handleEmailSubmit() {
     if (!email.trim()) return;
-    localStorage.setItem("user_email", email);
+    localStorage.setItem("user_email", email.trim());
     setEmailSubmitted(true);
-    await checkPremium(email);
+    await checkPremium(email.trim());
   }
 
   async function analyze() {
@@ -108,6 +139,8 @@ export default function App() {
         const newCount = usage.count + 1;
         saveUsage(newCount);
         setUsageCount(newCount);
+      } else {
+        saveToHistory(email.trim(), symptoms, text);
       }
       setResult(text);
     } catch (e) {
@@ -125,19 +158,26 @@ export default function App() {
   const cfg = severityConfig[severity];
   const remaining = DAILY_LIMIT - usageCount;
 
+  const d = darkMode;
+  const bg = d ? "#0f172a" : "#f8fafc";
+  const card = d ? "#1e293b" : "#ffffff";
+  const text = d ? "#f1f5f9" : "#1e293b";
+  const muted = d ? "#94a3b8" : "#64748b";
+  const border = d ? "#334155" : "#e2e8f0";
+  const inputBg = d ? "#0f172a" : "#f8fafc";
+
   return (
-    <div style={{ minHeight: "100vh", background: "#f8fafc", fontFamily: "'Inter', 'Segoe UI', sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: bg, fontFamily: "'Inter', 'Segoe UI', sans-serif", transition: "background 0.2s" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         textarea:focus, input:focus { outline: none; }
-        textarea::placeholder, input::placeholder { color: #94a3b8; }
       `}</style>
 
       {/* Header */}
-      <div style={{ background: "#1e40af", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64, boxShadow: "0 2px 8px rgba(30,64,175,0.3)" }}>
+      <div style={{ background: "#1e40af", padding: "0 32px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64, boxShadow: "0 2px 8px rgba(30,64,175,0.3)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ width: 38, height: 38, background: "rgba(255,255,255,0.2)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>⚕️</div>
           <div>
@@ -146,14 +186,22 @@ export default function App() {
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button onClick={toggleDark} style={{ background: "rgba(255,255,255,0.15)", border: "none", borderRadius: 20, padding: "5px 12px", color: "#fff", cursor: "pointer", fontSize: 14 }}>
+            {darkMode ? "☀️" : "🌙"}
+          </button>
           {isPremium ? (
-            <div style={{ background: "#fbbf24", borderRadius: 20, padding: "5px 14px" }}>
-              <span style={{ color: "#000", fontSize: 12, fontWeight: 700 }}>⭐ Premium</span>
-            </div>
+            <>
+              <button onClick={() => setShowHistory(!showHistory)} style={{ background: "rgba(255,255,255,0.15)", border: "none", borderRadius: 20, padding: "5px 12px", color: "#fff", cursor: "pointer", fontSize: 12 }}>
+                📋 History
+              </button>
+              <div style={{ background: "#fbbf24", borderRadius: 20, padding: "5px 14px" }}>
+                <span style={{ color: "#000", fontSize: 12, fontWeight: 700 }}>⭐ Premium</span>
+              </div>
+            </>
           ) : (
             <>
               <div style={{ background: "rgba(255,255,255,0.15)", borderRadius: 20, padding: "5px 12px" }}>
-                <span style={{ color: remaining <= 2 ? "#fca5a5" : "#bfdbfe", fontSize: 12, fontWeight: 600 }}>{remaining}/{DAILY_LIMIT} free</span>
+                <span style={{ color: remaining <= 1 ? "#fca5a5" : "#bfdbfe", fontSize: 12, fontWeight: 600 }}>{remaining}/{DAILY_LIMIT} free</span>
               </div>
               <a href={STRIPE_LINK} target="_blank" style={{ background: "#fbbf24", color: "#000", fontWeight: 700, fontSize: 12, padding: "6px 14px", borderRadius: 20, textDecoration: "none" }}>⭐ Premium</a>
             </>
@@ -162,32 +210,46 @@ export default function App() {
       </div>
 
       {/* Hero */}
-      <div style={{ background: "linear-gradient(135deg, #1e40af, #1d4ed8)", padding: "40px 24px 48px" }}>
-        <div style={{ maxWidth: "100%" , margin: "0 auto", textAlign: "center" }}>
-          <h1 style={{ color: "#fff", fontSize: 28, fontWeight: 700, lineHeight: 1.3, marginBottom: 10 }}>
+      <div style={{ background: "linear-gradient(135deg, #1e40af, #1d4ed8)", padding: "48px 32px 64px" }}>
+        <div style={{ maxWidth: 800, margin: "0 auto", textAlign: "center" }}>
+          <h1 style={{ color: "#fff", fontSize: 36, fontWeight: 700, lineHeight: 1.3, marginBottom: 12 }}>
             AI-Powered Symptom Analysis
           </h1>
-          <p style={{ color: "#93c5fd", fontSize: 15, lineHeight: 1.6 }}>
+          <p style={{ color: "#93c5fd", fontSize: 16, lineHeight: 1.6 }}>
             Describe your symptoms and receive instant guidance from our medical AI assistant.
           </p>
         </div>
       </div>
 
-      <div style={{ maxWidth: "100%", margin: "-24px auto 0", padding: "0 40px 60px" }}>
+      <div style={{ maxWidth: 800, margin: "-32px auto 0", padding: "0 32px 60px" }}>
+
+        {/* History panel */}
+        {showHistory && isPremium && (
+          <div style={{ background: card, borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: 24, marginBottom: 20, border: `1px solid ${border}` }}>
+            <h3 style={{ color: text, fontSize: 16, fontWeight: 700, marginBottom: 16 }}>📋 Your History</h3>
+            {history.length === 0 ? (
+              <p style={{ color: muted, fontSize: 14 }}>No history yet.</p>
+            ) : (
+              history.map((item, i) => (
+                <div key={i} style={{ borderBottom: `1px solid ${border}`, paddingBottom: 12, marginBottom: 12 }}>
+                  <p style={{ color: muted, fontSize: 11, marginBottom: 4 }}>{new Date(item.created_at).toLocaleDateString()}</p>
+                  <p style={{ color: text, fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{item.symptoms.substring(0, 80)}...</p>
+                  <p style={{ color: muted, fontSize: 13 }}>{item.result.substring(0, 120)}...</p>
+                </div>
+              ))
+            )}
+          </div>
+        )}
 
         {/* Email check */}
         {!emailSubmitted && (
-          <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: 28, animation: "fadeUp 0.3s ease" }}>
-            <h2 style={{ color: "#1e293b", fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Enter your email to continue</h2>
-            <p style={{ color: "#64748b", fontSize: 14, marginBottom: 20 }}>We use your email to check your premium status.</p>
-            <input
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="your@email.com"
-              type="email"
-              style={{ width: "100%", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 10, color: "#1e293b", fontSize: 15, fontFamily: "inherit", padding: "11px 14px", marginBottom: 16 }}
-            />
-            <button onClick={handleEmailSubmit} disabled={!email.trim()} style={{ width: "100%", padding: 14, background: email.trim() ? "#1e40af" : "#e2e8f0", color: email.trim() ? "#fff" : "#94a3b8", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, fontFamily: "inherit", cursor: email.trim() ? "pointer" : "not-allowed" }}>
+          <div style={{ background: card, borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: 32, animation: "fadeUp 0.3s ease", border: `1px solid ${border}` }}>
+            <h2 style={{ color: text, fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Enter your email to continue</h2>
+            <p style={{ color: muted, fontSize: 14, marginBottom: 20 }}>We use your email to check your premium status.</p>
+            <input value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" type="email"
+              style={{ width: "100%", background: inputBg, border: `1.5px solid ${border}`, borderRadius: 10, color: text, fontSize: 15, fontFamily: "inherit", padding: "11px 14px", marginBottom: 16 }} />
+            <button onClick={handleEmailSubmit} disabled={!email.trim()}
+              style={{ width: "100%", padding: 14, background: email.trim() ? "#1e40af" : border, color: email.trim() ? "#fff" : muted, border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, fontFamily: "inherit", cursor: email.trim() ? "pointer" : "not-allowed" }}>
               Continue →
             </button>
           </div>
@@ -195,61 +257,50 @@ export default function App() {
 
         {/* Form */}
         {emailSubmitted && !result && !loading && (
-          <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: 28, animation: "fadeUp 0.3s ease" }}>
+          <div style={{ background: card, borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: 32, animation: "fadeUp 0.3s ease", border: `1px solid ${border}` }}>
             {isPremium && (
-              <div style={{ background: "#fef9c3", border: "1.5px solid #fde68a", borderRadius: 10, padding: "10px 14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ background: d ? "#78350f30" : "#fef9c3", border: `1.5px solid ${d ? "#d9770640" : "#fde68a"}`, borderRadius: 10, padding: "10px 14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
                 <span>⭐</span>
-                <span style={{ color: "#92400e", fontSize: 13, fontWeight: 600 }}>Premium – Unlimited checks active</span>
+                <span style={{ color: d ? "#fbbf24" : "#92400e", fontSize: 13, fontWeight: 600 }}>Premium – Unlimited checks + History saved</span>
               </div>
             )}
-            <label style={{ color: "#374151", fontSize: 13, fontWeight: 600, display: "block", marginBottom: 8 }}>
-              Describe your symptoms
-            </label>
-            <textarea
-              value={symptoms}
-              onChange={e => setSymptoms(e.target.value)}
-              placeholder="e.g. I have had a persistent headache for 2 days, along with a sore throat and mild fever..."
-              rows={5}
-              style={{ width: "100%", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 10, color: "#1e293b", fontSize: 15, lineHeight: 1.7, resize: "none", fontFamily: "inherit", padding: "12px 14px", marginBottom: 16 }}
-            />
-            <label style={{ color: "#374151", fontSize: 13, fontWeight: 600, display: "block", marginBottom: 8 }}>Age <span style={{ color: "#6b7280", fontWeight: 400 }}>(optional)</span></label>
-            <input
-              value={age}
-              onChange={e => setAge(e.target.value)}
-              placeholder="e.g. 34"
-              style={{ width: "100%", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 10, color: "#1e293b", fontSize: 15, fontFamily: "inherit", padding: "11px 14px", marginBottom: 20 }}
-            />
+            <label style={{ color: text, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 8 }}>Describe your symptoms</label>
+            <textarea value={symptoms} onChange={e => setSymptoms(e.target.value)}
+              placeholder="e.g. I have had a persistent headache for 2 days, along with a sore throat and mild fever..." rows={5}
+              style={{ width: "100%", background: inputBg, border: `1.5px solid ${border}`, borderRadius: 10, color: text, fontSize: 15, lineHeight: 1.7, resize: "none", fontFamily: "inherit", padding: "12px 14px", marginBottom: 16 }} />
+            <label style={{ color: text, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 8 }}>Age <span style={{ color: muted, fontWeight: 400 }}>(optional)</span></label>
+            <input value={age} onChange={e => setAge(e.target.value)} placeholder="e.g. 34"
+              style={{ width: "100%", background: inputBg, border: `1.5px solid ${border}`, borderRadius: 10, color: text, fontSize: 15, fontFamily: "inherit", padding: "11px 14px", marginBottom: 20 }} />
             {!isPremium && remaining === 0 ? (
-              <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 12, padding: 20, textAlign: "center" }}>
+              <div style={{ background: d ? "#1e3a8a30" : "#eff6ff", border: `1.5px solid ${d ? "#1e40af60" : "#bfdbfe"}`, borderRadius: 12, padding: 24, textAlign: "center" }}>
                 <p style={{ color: "#1e40af", fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Daily limit reached</p>
-                <p style={{ color: "#64748b", fontSize: 14, marginBottom: 16 }}>Upgrade to Premium for unlimited daily checks.</p>
+                <p style={{ color: muted, fontSize: 14, marginBottom: 16 }}>You've used your 3 free daily checks. Upgrade for unlimited access!</p>
                 <a href={STRIPE_LINK} target="_blank" style={{ display: "block", background: "#1e40af", color: "#fff", fontWeight: 700, fontSize: 15, padding: 14, borderRadius: 10, textDecoration: "none", marginBottom: 10 }}>
                   ⭐ Upgrade to Premium – €4/month
                 </a>
-                <p style={{ color: "#94a3b8", fontSize: 12 }}>Or come back tomorrow for 6 more free checks</p>
+                <p style={{ color: muted, fontSize: 12 }}>Or come back tomorrow for 3 more free checks</p>
               </div>
             ) : (
-              <button onClick={analyze} disabled={!symptoms.trim()} style={{ width: "100%", padding: 15, background: symptoms.trim() ? "#1e40af" : "#e2e8f0", color: symptoms.trim() ? "#fff" : "#94a3b8", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, fontFamily: "inherit", cursor: symptoms.trim() ? "pointer" : "not-allowed" }}>
+              <button onClick={analyze} disabled={!symptoms.trim()}
+                style={{ width: "100%", padding: 15, background: symptoms.trim() ? "#1e40af" : border, color: symptoms.trim() ? "#fff" : muted, border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, fontFamily: "inherit", cursor: symptoms.trim() ? "pointer" : "not-allowed" }}>
                 Analyze Symptoms →
               </button>
             )}
-            <p style={{ color: "#94a3b8", fontSize: 11, textAlign: "center", marginTop: 12 }}>
-              🔒 Not a diagnosis. Always consult a healthcare professional.
-            </p>
+            <p style={{ color: muted, fontSize: 11, textAlign: "center", marginTop: 12 }}>🔒 Not a diagnosis. Always consult a healthcare professional.</p>
           </div>
         )}
 
         {/* Loading */}
         {loading && (
-          <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: 48, textAlign: "center" }}>
-            <div style={{ width: 48, height: 48, border: "3px solid #e2e8f0", borderTop: "3px solid #1e40af", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-            <p style={{ color: "#64748b", fontSize: 14, fontWeight: 500 }}>Analyzing your symptoms...</p>
+          <div style={{ background: card, borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: 48, textAlign: "center", border: `1px solid ${border}` }}>
+            <div style={{ width: 48, height: 48, border: `3px solid ${border}`, borderTop: "3px solid #1e40af", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
+            <p style={{ color: muted, fontSize: 14, fontWeight: 500 }}>Analyzing your symptoms...</p>
           </div>
         )}
 
         {/* Error */}
         {error && !result && (
-          <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: 24, textAlign: "center" }}>
+          <div style={{ background: card, borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: 24, textAlign: "center", border: `1px solid ${border}` }}>
             <p style={{ color: "#dc2626", fontWeight: 600, marginBottom: 8 }}>Something went wrong</p>
             <button onClick={() => setError(null)} style={{ background: "#1e40af", color: "#fff", border: "none", borderRadius: 8, padding: "8px 20px", fontFamily: "inherit", cursor: "pointer" }}>Try Again</button>
           </div>
@@ -258,26 +309,27 @@ export default function App() {
         {/* Result */}
         {result && (
           <div ref={resultRef} style={{ animation: "fadeUp 0.4s ease" }}>
-            <div style={{ background: cfg.bg, border: `1.5px solid ${cfg.border}`, borderRadius: 12, padding: "14px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ background: d ? cfg.darkBg : cfg.lightBg, border: `1.5px solid ${d ? cfg.darkBorder : cfg.lightBorder}`, borderRadius: 12, padding: "14px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ background: cfg.color, color: "#fff", fontWeight: 800, width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>{cfg.icon}</span>
               <span style={{ color: cfg.color, fontWeight: 700, fontSize: 14 }}>{cfg.label}</span>
             </div>
-            <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: 24, marginBottom: 16 }}>
+            <div style={{ background: card, borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", padding: 28, marginBottom: 16, border: `1px solid ${border}` }}>
               {lines.map((line, i) => {
                 const isHeader = line.startsWith("##") || (line.endsWith(":") && line.length < 40);
                 const clean = line.replace(/^#+\s*/, "").replace(/\*\*/g, "");
-                return <p key={i} style={{ color: isHeader ? "#1e40af" : "#334155", fontSize: isHeader ? 11 : 15, fontWeight: isHeader ? 700 : 400, letterSpacing: isHeader ? 1.5 : 0, textTransform: isHeader ? "uppercase" : "none", marginBottom: isHeader ? 8 : 10, marginTop: isHeader && i > 0 ? 20 : 0, lineHeight: 1.7, borderLeft: isHeader ? "3px solid #1e40af" : "none", paddingLeft: isHeader ? 10 : 0 }}>{clean}</p>;
+                return <p key={i} style={{ color: isHeader ? "#1e40af" : text, fontSize: isHeader ? 11 : 15, fontWeight: isHeader ? 700 : 400, letterSpacing: isHeader ? 1.5 : 0, textTransform: isHeader ? "uppercase" : "none", marginBottom: isHeader ? 8 : 10, marginTop: isHeader && i > 0 ? 20 : 0, lineHeight: 1.7, borderLeft: isHeader ? "3px solid #1e40af" : "none", paddingLeft: isHeader ? 10 : 0 }}>{clean}</p>;
               })}
             </div>
-            <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 12, padding: 16, marginBottom: 16 }}>
-              <p style={{ color: "#1e40af", fontSize: 12, lineHeight: 1.6 }}>⚕️ This analysis is AI-generated and does not constitute medical advice. Please consult a qualified healthcare professional.</p>
+            <div style={{ background: d ? "#1e3a8a20" : "#eff6ff", border: `1.5px solid ${d ? "#1e40af40" : "#bfdbfe"}`, borderRadius: 12, padding: 16, marginBottom: 16 }}>
+              <p style={{ color: d ? "#93c5fd" : "#1e40af", fontSize: 12, lineHeight: 1.6 }}>⚕️ This analysis is AI-generated and does not constitute medical advice. Please consult a qualified healthcare professional.</p>
             </div>
             {!isPremium && (
               <a href={STRIPE_LINK} target="_blank" style={{ display: "block", background: "#fbbf24", color: "#000", fontWeight: 700, fontSize: 14, padding: 14, borderRadius: 10, textAlign: "center", textDecoration: "none", marginBottom: 12 }}>
-                ⭐ Upgrade to Premium – €4/month – Unlimited checks
+                ⭐ Upgrade to Premium – €4/month – Unlimited + History
               </a>
             )}
-            <button onClick={() => { setResult(null); setSymptoms(""); setAge(""); }} style={{ width: "100%", padding: 13, background: "transparent", color: "#1e40af", border: "1.5px solid #bfdbfe", borderRadius: 10, fontSize: 14, fontWeight: 600, fontFamily: "inherit", cursor: "pointer" }}>
+            <button onClick={() => { setResult(null); setSymptoms(""); setAge(""); }}
+              style={{ width: "100%", padding: 13, background: "transparent", color: "#1e40af", border: `1.5px solid ${d ? "#1e40af60" : "#bfdbfe"}`, borderRadius: 10, fontSize: 14, fontWeight: 600, fontFamily: "inherit", cursor: "pointer" }}>
               ← New Symptom Check
             </button>
           </div>
