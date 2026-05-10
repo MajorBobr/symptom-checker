@@ -163,7 +163,7 @@ export default function App() {
 
       {/* Hero */}
       <div style={{ background: "linear-gradient(135deg, #1e40af, #1d4ed8)", padding: "40px 24px 48px" }}>
-        <div style={{ maxWidth: 960, margin: "0 auto", textAlign: "center" }}>
+        <div style={{ maxWidth: "100%" , margin: "0 auto", textAlign: "center" }}>
           <h1 style={{ color: "#fff", fontSize: 28, fontWeight: 700, lineHeight: 1.3, marginBottom: 10 }}>
             AI-Powered Symptom Analysis
           </h1>
@@ -173,7 +173,7 @@ export default function App() {
         </div>
       </div>
 
-      <div style={{ maxWidth: 960, margin: "-24px auto 0", padding: "0 20px 60px" }}>
+      <div style={{ maxWidth: "100%", margin: "-24px auto 0", padding: "0 40px 60px" }}>
 
         {/* Email check */}
         {!emailSubmitted && (
