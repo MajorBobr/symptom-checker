@@ -173,15 +173,14 @@ export default function App() {
       </nav>
 
       {/* HERO */}
-      <section style={{ padding: "80px 40px", maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", gap: 60 }}>
+      <section style={{ padding: "80px 40px", width: "100%", display: "flex", alignItems: "center", gap: 60 }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: `${ACCENT}15`, border: `1px solid ${ACCENT}30`, borderRadius: 20, padding: "6px 14px", marginBottom: 24 }}>
             <span style={{ width: 8, height: 8, background: ACCENT, borderRadius: "50%", display: "inline-block" }}></span>
             <span style={{ color: ACCENT, fontSize: 13, fontWeight: 600 }}>AI-powered health guidance</span>
           </div>
           <h1 style={{ color: textMain, fontSize: 52, fontWeight: 800, lineHeight: 1.15, marginBottom: 20, letterSpacing: -1.5 }}>
-            Understand your<br />symptoms. <span style={{ color: ACCENT }}>Skip the<br />Reddit rabbit hole.</span>
-          </h1>
+           Your symptoms,<br />analyzed instantly. <span style={{ color: ACCENT }}>Stop guessing,<br />start knowing.</span>
           <p style={{ color: textMuted, fontSize: 16, lineHeight: 1.8, marginBottom: 36, maxWidth: 480 }}>
             SymptomAI analyzes your symptoms, tracks your history, and helps you decide when to see a clinician — based on clinical knowledge. Educational only, never a substitute for professional care.
           </p>
@@ -326,7 +325,7 @@ export default function App() {
 
       {/* FEATURES */}
       <section id="features" style={{ padding: "80px 40px", background: d ? "#1a2d3d" : "#ede0d0" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ width: "100%" }}>
           <div style={{ textAlign: "center", marginBottom: 56 }}>
             <h2 style={{ color: textMain, fontSize: 36, fontWeight: 800, marginBottom: 12 }}>Everything you need</h2>
             <p style={{ color: textMuted, fontSize: 16 }}>Smart health guidance, not random internet advice</p>
